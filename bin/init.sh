@@ -1,4 +1,4 @@
 #!/bin/bash
 
 touch no-vote
-mkdir -p absentees/ positions/ votes/
+mkdir -p positions/ votes/

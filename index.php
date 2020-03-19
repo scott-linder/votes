@@ -6,8 +6,11 @@
   <link href="//maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-BVYiiSIFeK1dGmJRAkycuHAHRg32OmUcww7on3RYdg4Va+PmSTsz/K68vbdEjh4u" crossorigin="anonymous">
   <style>
     body {
-      max-width: 20em;
+      max-width: 30em;
       margin: 0 auto;
+    }
+    h1, p {
+      text-align: center;
     }
     input[type="text"],
     input[type="password"]  {
@@ -27,13 +30,9 @@ function clean_username($s) {
 function not_dot($s) {
   return !($s === "." or $s === "..");
 }
-function no_vote($s, $position_file) {
-  echo "<dd>no vote</dd>";
-  file_exists($position_file) and unlink($position_file);
-}
 if (file_exists('no-vote')):
   echo "<h1>Hold Up</h1>";
-  echo "<p>I am tallying as fast as I can.</p>";
+  echo "<p>The vote has either not begin, is paused, or has ended.</p>";
 elseif ($_SERVER['REQUEST_METHOD'] === "POST"):
   is_string($_POST['username']) and is_string($_POST['password']) or die("invalid POST parameters");
   $ldap = ldap_connect("localhost") or die("failed to connect to ldap");
@@ -43,40 +42,47 @@ elseif ($_SERVER['REQUEST_METHOD'] === "POST"):
   $pass = $_POST['password'];
   if ($user and $pass and $bind = ldap_bind($ldap, $binddn, $pass)) {
     $votes_dir = 'votes/' . $user;
-    echo "<p>Thank you for your vote, $user!</p>";
+    echo "<h1>Thank you for your vote, $user!</h1>";
+    echo "<p>The candidates you approved for each position are listed below.</p>";
     echo "<dl>";
     file_exists($votes_dir) or mkdir($votes_dir, 0777, true);
     foreach (array_filter(scandir("positions"), 'not_dot') as $position) {
-      $position_file = $votes_dir . '/' . $position;
       echo "<dt>$position</dt>";
-      if (!array_key_exists($position, $_POST)
-          or !is_string($_POST[$position])
-          or $_POST[$position] === "") {
-        no_vote($position_file);
-        continue;
-      }
-      $vote = clean_username($_POST[$position]);
+      $position_file = $votes_dir . '/' . $position;
       $possible = array_map('trim', file('positions/' . $position));
-      if (in_array($vote, $possible, true)) {
-        echo "<dd>$vote</dd>";
-        file_put_contents($position_file, $vote . "\n");
+      $votes = '';
+      if (array_key_exists($position, $_POST) and is_array($_POST[$position])) {
+        foreach (array_map('clean_username', $_POST[$position]) as $vote) {
+          if (in_array($vote, $possible, true)) {
+            echo "<dd>$vote</dd>";
+            $votes .= $vote . "\n";
+          }
+        }
       } else {
-        no_vote($position_file);
+        echo "<dd><em>no candidates approved</em></dd>";
       }
+      file_put_contents($position_file, $votes);
     }
     echo "</dl>";
+    echo '<p>If you made a mistake on your ballot <a href=".">you may fill out a fresh one</a> to replace it.</p>';
   } else {
     echo "<p>Login failed; go back in your browser history and try again.</p>";
   }
 else: ?>
 <h1>CCoWMU Votes</h1>
+<p>CCoWMU elections use <a
+href="https://en.wikipedia.org/wiki/Approval_voting">Approval Voting</a>.</p>
+<p>For each position below, please select ("approve")
+<em><strong>all</strong></em> candidates which you think are fit for the
+position. The winner for each position will be the candidate with the most
+votes of approval.</p>
 <form method="POST">
 <?php foreach (array_filter(scandir("positions"), 'not_dot') as $position): ?>
   <fieldset>
     <legend><?php echo $position ?></legend>
   <?php foreach (array_map('trim', file('positions/' . $position)) as $candidate): ?>
     <div>
-    <input type="radio" name="<?php echo $position ?>" value="<?php echo $candidate ?>">
+    <input type="checkbox" name="<?php echo $position ?>[]" value="<?php echo $candidate ?>">
       <label for="<?php echo $candidate ?>"><?php echo $candidate ?></label>
     </div>
   <?php endforeach; ?>
