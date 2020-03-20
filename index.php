@@ -1,20 +1,18 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
   <title>CCoWMU Votes</title>
-  <link href="//maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-BVYiiSIFeK1dGmJRAkycuHAHRg32OmUcww7on3RYdg4Va+PmSTsz/K68vbdEjh4u" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css" integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm" crossorigin="anonymous">
   <style>
     body {
       max-width: 30em;
       margin: 0 auto;
+      padding: 0 1em;
     }
     h1, p {
       text-align: center;
-    }
-    input[type="text"],
-    input[type="password"]  {
-      display: block;
     }
     input[type="submit"] {
       width: 100%;
@@ -44,26 +42,26 @@ elseif ($_SERVER['REQUEST_METHOD'] === "POST"):
     $votes_dir = 'votes/' . $user;
     echo "<h1>Thank you for your vote, $user!</h1>";
     echo "<p>The candidates you approved for each position are listed below.</p>";
-    echo "<dl>";
     file_exists($votes_dir) or mkdir($votes_dir, 0777, true);
     foreach (array_filter(scandir("positions"), 'not_dot') as $position) {
-      echo "<dt>$position</dt>";
+      echo "<h2>$position</h2>";
       $position_file = $votes_dir . '/' . $position;
       $possible = array_map('trim', file('positions/' . $position));
       $votes = '';
       if (array_key_exists($position, $_POST) and is_array($_POST[$position])) {
+        echo "<ul>";
         foreach (array_map('clean_username', $_POST[$position]) as $vote) {
           if (in_array($vote, $possible, true)) {
-            echo "<dd>$vote</dd>";
+            echo "<li>$vote</li>";
             $votes .= $vote . "\n";
           }
         }
+        echo "</ul>";
       } else {
-        echo "<dd><em>no candidates approved</em></dd>";
+        echo "<p><em>no candidates approved</em></p>";
       }
       file_put_contents($position_file, $votes);
     }
-    echo "</dl>";
     echo '<p>If you made a mistake on your ballot <a href=".">you may fill out a fresh one</a> to replace it.</p>';
   } else {
     echo "<p>Login failed; go back in your browser history and try again.</p>";
@@ -78,23 +76,23 @@ position. The winner for each position will be the candidate with the most
 votes of approval.</p>
 <form method="POST">
 <?php foreach (array_filter(scandir("positions"), 'not_dot') as $position): ?>
-  <fieldset>
+  <fieldset class="form-group">
     <legend><?php echo $position ?></legend>
   <?php foreach (array_map('trim', file('positions/' . $position)) as $candidate): ?>
-    <div>
-    <input type="checkbox" name="<?php echo $position ?>[]" value="<?php echo $candidate ?>">
-      <label for="<?php echo $candidate ?>"><?php echo $candidate ?></label>
+    <div class="form-check">
+      <input class="form-check-input" type="checkbox" id="<?php echo $position . "-" . $candidate ?>" name="<?php echo $position ?>[]" value="<?php echo $candidate ?>">
+      <label class="form-check-label" for="<?php echo $position . "-" . $candidate ?>"><?php echo $candidate ?></label>
     </div>
   <?php endforeach; ?>
   </fieldset>
 <?php endforeach; ?>
-<div>
+<div class="form-group">
   <label for="username">username</label>
-  <input type="text" name="username" class="form-control">
+  <input type="text" name="username" class="form-control" required>
 </div>
-<div>
+<div class="form-group">
   <label for="password">password</label>
-  <input type="password" name="password" class="form-control">
+  <input type="password" name="password" class="form-control" required>
 </div>
 <input type="submit" value="cast vote" class="btn btn-primary">
 </form>
